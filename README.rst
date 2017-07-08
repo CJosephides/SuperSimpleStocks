@@ -21,4 +21,4 @@ Some implementation remarks
 
 4. I implemented stock trades as a namedtuples, which I find are capable light-weight alternatives to classes that are just records. Not everybody is familiar with namedtuples, however, so these could easily be changed to  regular tuples (even dictionaries or classes) without much loss of generality.
 
-5. I wrote some very rudimentary tests (some unit, some not-so-unit) in test_stock.py to check if things work reasonably well.
+5. I wrote some very rudimentary tests (some unit, some not-so-unit) in test_stock.py to check if things work reasonably well. Again, I didn't go overboard with these, and I even grouped many conceptually-similar assertions into single tests.
