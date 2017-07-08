@@ -1,4 +1,6 @@
-# Super Simple Stocks exercise
+============================
+Super Simple Stocks exercise
+============================
 
 This is my (Christos Josephides) attempt of the Super Simple Stocks assignment.
 
@@ -6,7 +8,10 @@ I wrote code for Python 3.x, which runs without errors on a clean virtual enviro
 
 I designed and implemented code to fulfil the stated requirements to my best understanding and interpretation of the problem. I may have made some unwarranted assumptions, since I am not very familiar with terms from finance; these are clearly marked in the code.
 
-## Some remarks
+Let me know if there are any questions: ``cjosephides@gmail.com``.
+
+Some implementation remarks
+===========================
 
 1. I restricted myself to the standard library for this task so this project can be evaluated on a clean virtual environment. In a more realistic scenario, I would probably use external libraries; e.g., pandas for trading time series.
 
