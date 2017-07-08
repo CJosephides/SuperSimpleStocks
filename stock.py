@@ -7,6 +7,7 @@ Implementation of the Stock class, for the Super Simple Stocks assignment.
 1. I restricted myself to the standard library for this task. In a more 
 realistic scenario, I would probably use external libraries; e.g., pandas for 
 trading time series.
+... so that this assignment can be evaluated on a clean virtual environment
 
 2. I mostly adhered to PEP8 guidelines; however, I violat the 80 
 character/line rule when this improves readability.
