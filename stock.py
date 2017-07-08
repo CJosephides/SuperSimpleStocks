@@ -3,24 +3,6 @@ stock.py
 
 Implementation of the Stock class, for the Super Simple Stocks assignment.
 
-# Some remarks:
-1. I restricted myself to the standard library for this task. In a more 
-realistic scenario, I would probably use external libraries; e.g., pandas for 
-trading time series.
-... so that this assignment can be evaluated on a clean virtual environment
-
-2. I mostly adhered to PEP8 guidelines; however, I violat the 80 
-character/line rule when this improves readability.
-
-3. I used datetime for time stamps. It may not be the prettiest, particularly 
-from an end-user perspective, but it's part of the standard library and works 
-very well for our purposes here. If I were implementing this more generally, 
-I would probably write a friendlier user interface for datetime objects.
-
-4. I implemented stock trades as a namedtuples, which I find are capable 
-light-weight alternatives to classes that are just records. Not everybody is 
-familiar with namedtuples, however, so these could easily be changed to 
-regular tuples.
 """
 
 from collections import namedtuple
@@ -30,7 +12,8 @@ from math import exp
 import datetime
 
 # Named tuple represents stock trades. 
-Trade = namedtuple('Trade', ['buy_sell', 'quantity', 'trade_price', 'trade_time'])
+Trade = namedtuple('Trade', ['buy_sell', 'quantity', 'trade_price', 
+                             'trade_time'])
 """
 buy_sell: +1 for buying; -1 for selling.
 quantity: non-negative integer of shares traded.
@@ -77,10 +60,13 @@ class Stock:
         assert stype.lower() in ('common', 'preferred'),\
             'stock type, %r, must be "common" or "preferred"' % stype
         assert (isinstance(last_dividend, int) and last_dividend >= 0),\
-            'stock last_dividend, %r, must be a non-negative integer' % last_dividend
+            ('stock last_dividend, %r, must be a non-negative integer' 
+             % last_dividend)
         assert (fixed_dividend is nan) or \
-            (isinstance(fixed_dividend, float) and 0. <= fixed_dividend <= 1.),\
-            'stock fixed dividend, %r, must be a valid percentile in [0., 1.] or nan' % fixed_dividend
+            (isinstance(fixed_dividend, float) and 
+             0. <= fixed_dividend <= 1.),\
+            ('stock fixed dividend, %r, must be a valid percentile in ' 
+             '[0., 1.] or nan' % fixed_dividend)
         assert (isinstance(par_value, int) and par_value >= 0),\
             'stock par_value, %r, must be a non-negative integer' % par_value
 
@@ -97,7 +83,7 @@ class Stock:
 
         # Add to the class dictionary. The stocks are uniquely identified by 
         # their symbol.
-        Stock.stocks[symbol] = self  # value is a reference to the stock instance
+        Stock.stocks[symbol] = self  # a reference to the stock instance
 
     def __repr__(self):
         """
@@ -109,9 +95,10 @@ class Stock:
         """
         Print a simple summary of the stock.
         """
-        return '{0:s} ({1:s}): LastDiv: {2:d}, FixedDiv: {3:.2f}, ParVal: {4:d}}'.format(
-            self.symbol, self.stype, self.last_dividend, self.fixed_dividend, 
-            self.par_value)
+        return ('{0:s} ({1:s}): LastDiv: {2:d}, FixedDiv: {3:.2f}, '
+                'ParVal: {4:d}'.format(self.symbol, self.stype, 
+                                       self.last_dividend, self.fixed_dividend,
+                                       self.par_value))
 
     def dividend_yield(self):
         """
