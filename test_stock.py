@@ -6,8 +6,8 @@ Unit (and some not-so-unit) tests for stock.py.
 
 import datetime
 from math import nan
-from stock import Stock, Trade 
 import unittest
+from stock import Stock
 
 class StockTestCase(unittest.TestCase):
     """
@@ -104,9 +104,9 @@ class StockTestCase(unittest.TestCase):
 
         # Add some mock Trades in the distant past (such that they are excluded
         # from the average).
-        sALE.buy(100, 87, datetime.datetime.now() - 
+        sALE.buy(100, 87, datetime.datetime.now() -
                  datetime.timedelta(minutes=16))
-        sALE.buy(23, 34, datetime.datetime.now() - 
+        sALE.buy(23, 34, datetime.datetime.now() -
                  datetime.timedelta(minutes=15))
         self.assertEqual(len(sALE._trades), 4)
 
@@ -132,8 +132,8 @@ class StockTestCase(unittest.TestCase):
 
         # The dividend yield calculation should now use a ticker price
         # determined from the average trading price.
-        self.assertEqual(sALE.dividend_yield(), 23. / 
-            (((500*25)+(300*15))/(500+300)))
+        self.assertEqual(sALE.dividend_yield(), 23. /
+                         (((500*25)+(300*15))/(500+300)))
 
     def test_stock_dividend_yield_preferred(self):
         """
@@ -156,11 +156,11 @@ class StockTestCase(unittest.TestCase):
         # `preferred` stocks should not use the `common` calculation for
         # dividend yields...
         self.assertNotEqual(sGIN.dividend_yield(),
-            8 / ((320*95 + 180*110) / (320+180)))
+                            8 / ((320*95 + 180*110) / (320+180)))
 
         # ... instead, they should use the `preferred` calculation.
         self.assertEqual(sGIN.dividend_yield(),
-            (0.02 * 100) / ((320*95 + 180*110) / (320+180)))
+                         (0.02 * 100) / ((320*95 + 180*110) / (320+180)))
 
     def test_gbce_all_share_index(self):
         """
@@ -178,46 +178,47 @@ class StockTestCase(unittest.TestCase):
 
         # Add some Trades.
         trades = {
-        'TEA': [(1, 10, 95, datetime.datetime.now()),
-                (-1, 20, 90, datetime.datetime.now()),
-                (1, 45, 120, datetime.datetime.now())],
-        'POP': [(1, 90, 95, datetime.datetime.now()),
-                (1, 65, 90, datetime.datetime.now()),
-                (-1, 200, 100, datetime.datetime.now())],
-        'ALE': [(1, 35, 50, datetime.datetime.now()),
-                (-1, 50, 10, datetime.datetime.now())],
-        'GIN': [(1, 100, 1000, datetime.datetime.now() - 
-                 datetime.timedelta(minutes=-20))]  # should not be used (past)
+            'TEA': [(1, 10, 95, datetime.datetime.now()),
+                    (-1, 20, 90, datetime.datetime.now()),
+                    (1, 45, 120, datetime.datetime.now())],
+            'POP': [(1, 90, 95, datetime.datetime.now()),
+                    (1, 65, 90, datetime.datetime.now()),
+                    (-1, 200, 100, datetime.datetime.now())],
+            'ALE': [(1, 35, 50, datetime.datetime.now()),
+                    (-1, 50, 10, datetime.datetime.now())],
+            'GIN': [(1, 100, 1000, datetime.datetime.now() -
+                     datetime.timedelta(minutes=-20))]  # should not be used
         }
 
         for stock, trade_list in trades.items():
-            for t in trade_list:
-                Stock.stocks[stock]._record_trade(*t)
+            for trade in trade_list:
+                Stock.stocks[stock]._record_trade(*trade)
 
         # Check that the stock (ticker) price for each stock is correct.
         self.assertEqual(Stock.stocks['TEA'].stock_price(),
-            (10*95 + 20*90 + 45*120)/(10+20+45))
+                         (10*95 + 20*90 + 45*120)/(10+20+45))
         self.assertEqual(Stock.stocks['POP'].stock_price(),
-            (90*95 + 65*90 + 200*100)/(90+65+200))
+                         (90*95 + 65*90 + 200*100)/(90+65+200))
         self.assertEqual(Stock.stocks['ALE'].stock_price(),
-            (35*50 + 50 * 10)/(35+50))
+                         (35*50 + 50 * 10)/(35+50))
         self.assertEqual(Stock.stocks['GIN'].stock_price(),
-            Stock.stocks['GIN'].par_value)  # no relevant trades
+                         Stock.stocks['GIN'].par_value)  # no relevant trades
         self.assertEqual(Stock.stocks['JOE'].stock_price(),
-            Stock.stocks['JOE'].par_value)  # zero recorded trades
+                         Stock.stocks['JOE'].par_value)  # zero recorded trades
 
         # The geometric mean calculation should be correct.
         # We do this calculation in log space in Stock.gbce_all_share_index(),
         # so check against a calculation  without the transformation here.
-        sp = [(10*95 + 20*90 + 45*120)/(10+20+45),
-              (90*95 + 65*90 + 200*100)/(90+65+200),
-              (35*50 + 50 * 10)/(35+50),
-              Stock.stocks['GIN'].par_value,
-              Stock.stocks['JOE'].par_value]
-        
+        stock_price = [(10*95 + 20*90 + 45*120)/(10+20+45),
+                       (90*95 + 65*90 + 200*100)/(90+65+200),
+                       (35*50 + 50 * 10)/(35+50),
+                       Stock.stocks['GIN'].par_value,
+                       Stock.stocks['JOE'].par_value]
+
         self.assertAlmostEqual(Stock.gbce_all_share_index(),
-            (sp[0] * sp[1] * sp[2] * sp[3] * sp[4]) ** (1./5))
+                               (stock_price[0] * stock_price[1] *
+                                stock_price[2] * stock_price[3] *
+                                stock_price[4]) ** (1./5))
 
 if __name__ == '__main__':
     unittest.main()
-

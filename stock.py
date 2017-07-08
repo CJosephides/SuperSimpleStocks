@@ -2,7 +2,6 @@
 stock.py
 
 Implementation of the Stock class, for the Super Simple Stocks assignment.
-
 """
 
 from collections import namedtuple
