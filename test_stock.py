@@ -83,6 +83,11 @@ class StockTestCase(unittest.TestCase):
         sALE.sell(300, 15)
         self.assertEqual(sALE._trades[-1].buy_sell, -1)
 
+        # Trading cannot happen in the future.
+        with self.assertRaises(AssertionError):
+            sALE.buy(500, 25,
+                     datetime.datetime.now() + datetime.timedelta(minutes=1))
+
     def test_stock_price(self):
         """
         Tests stock (ticker) price calculation.
@@ -162,6 +167,33 @@ class StockTestCase(unittest.TestCase):
         self.assertEqual(sGIN.dividend_yield(),
                          (0.02 * 100) / ((320*95 + 180*110) / (320+180)))
 
+    def test_stock_price_earnings_ratio(self):
+        """
+        Tests correct price-earnings calculation for both `common` and
+        `preferred` stock types.
+        """
+
+        # Make a mock object for testing.
+        sALE = Stock('ALE', 'common', 23, nan, 60)
+        # Add some mock Trades.
+        sALE.buy(500, 25)
+        sALE.sell(300, 15)
+        self.assertEqual(len(sALE._trades), 2)
+        # Make a mock object for testing.
+        sGIN = Stock('GIN', 'preferred', 8, 0.02, 100)
+        # Add some mock Trades.
+        sGIN.buy(320, 95)
+        sGIN.sell(180, 110)
+        self.assertEqual(len(sGIN._trades), 2)
+
+        # `ALE` stock should use the last_dividend as dividend
+        self.assertEqual(sALE.price_earnings_ratio(),
+                         ((500*25+300*15)/(500+300)) / 23.)
+
+        # But `GIN` stock should the fixed_dividend * par_value as dividend
+        self.assertEqual(sGIN.price_earnings_ratio(),
+                         ((320*95+180*110)/(320+180)) / (0.02 * 100))
+
     def test_gbce_all_share_index(self):
         """
         Test the GBCE All Share Index across multiple stocks, each with many
@@ -187,7 +219,7 @@ class StockTestCase(unittest.TestCase):
             'ALE': [(1, 35, 50, datetime.datetime.now()),
                     (-1, 50, 10, datetime.datetime.now())],
             'GIN': [(1, 100, 1000, datetime.datetime.now() -
-                     datetime.timedelta(minutes=-20))]  # should not be used
+                     datetime.timedelta(minutes=14))]
         }
 
         for stock, trade_list in trades.items():
@@ -200,9 +232,8 @@ class StockTestCase(unittest.TestCase):
         self.assertEqual(Stock.stocks['POP'].stock_price(),
                          (90*95 + 65*90 + 200*100)/(90+65+200))
         self.assertEqual(Stock.stocks['ALE'].stock_price(),
-                         (35*50 + 50 * 10)/(35+50))
-        self.assertEqual(Stock.stocks['GIN'].stock_price(),
-                         Stock.stocks['GIN'].par_value)  # no relevant trades
+                         (35*50 + 50*10)/(35+50))
+        self.assertEqual(Stock.stocks['GIN'].stock_price(), 1000)
         self.assertEqual(Stock.stocks['JOE'].stock_price(),
                          Stock.stocks['JOE'].par_value)  # zero recorded trades
 
@@ -212,7 +243,7 @@ class StockTestCase(unittest.TestCase):
         stock_price = [(10*95 + 20*90 + 45*120)/(10+20+45),
                        (90*95 + 65*90 + 200*100)/(90+65+200),
                        (35*50 + 50 * 10)/(35+50),
-                       Stock.stocks['GIN'].par_value,
+                       1000,
                        Stock.stocks['JOE'].par_value]
 
         self.assertAlmostEqual(Stock.gbce_all_share_index(),

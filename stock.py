@@ -99,40 +99,12 @@ class Stock:
                                        self.last_dividend, self.fixed_dividend,
                                        self.par_value))
 
-    def dividend_yield(self):
-        """
-        Return the stock's dividend yield.
-
-        The calculation depends on the type of the stock.
-        The ticker price is calculated from the stock's trading in the past 15
-        minutes; if there have been no trades use the par value of the stock.
-        """
-
-        ticker_price = self.stock_price()
-
-        # Force float division (standard in Python 3.x)
-        if self.stype == 'common':
-            return float(self.last_dividend) / ticker_price
-
-        return float(self.fixed_dividend) * self.par_value / ticker_price
-
-    def price_earnings_ratio(self):
-        """
-        Returns the stock's price-earnings ratio.
-
-        The ticker price is calculated from the stock's trading in the past 15
-        minutes; if there have been no trades use the par value of the stock.
-        """
-
-        ticker_price = self.stock_price()
-
-        # Assume 'dividend' means 'last dividend' in the specification.
-        # NOTE I am not familiar with these terms, so I may be wrong.
-        return ticker_price / self.last_dividend  # force float division
-
     def buy(self, quantity, trade_price, trade_time=None):
         """
         Records a 'buy' trade.
+
+        We explicitly forbid trades with a timestamp (trade_time) set in the
+        future.
 
         This is a convenience function, to present a slightly nicer interface.
         The work is done by invoking the record_trade method.
@@ -152,9 +124,14 @@ class Stock:
         """
         Records a 'sell' trade.
 
+        We explicitly forbid trades with a timestamp (trade_time) set in the
+        future.
+
         This is a convenience function, to present a nicer interface. The work
         is done by invoking the record_trade method.
 
+        Args
+        ----
         quantity : a non-negative integer.
         trade_price : a non-negative integer (in pennies).
         trade_time : a datetime object, which defaults to the current time.
@@ -179,6 +156,8 @@ class Stock:
             'Trade price, %r, must be a non-negative integer' % quantity
         assert isinstance(trade_time, datetime.datetime),\
             'Trade time, %r, must be a datetime object' % datetime
+        assert trade_time <= datetime.datetime.now(),\
+            'Trading time cannot be in the future!'
 
         self._trades.append(Trade(buy_sell, quantity, trade_price, trade_time))
 
@@ -193,30 +172,77 @@ class Stock:
 
         # If there have been no stock trades at all, then return the par value
         # of the stock.
-        if self._trades is False:
+        if len(self._trades) == 0:
             return self.par_value
 
-        # If we have any trades, we can attempt to calculate a mean.
-        trade_value = 0
-        trade_quantity = 0
+        # NOTE It is not clear how we should handle the case with no *recent*
+        # trades. To handle this, I assumed that we can calculate an average
+        # (over the specified time window length) starting from the time of the
+        # *latest* trade. This is implemented below.
+
+        latest_trade = max([trade.trade_time for trade in self._trades])
+
+        # Check if we have had any trades in the specified time window.
+        if datetime.datetime.now() - latest_trade <= time_window:
+            # If we have recent trades, then we will extend the time window
+            # backwards from the current time.
+            search_start = datetime.datetime.now()
+        else:
+            # Otherwise, we will extend the time window backwards from the time
+            # of the latest trade.
+            search_start = latest_trade
+
         # Generate an iterable by selecting trades within the time window;
         # then, do a simple weighted mean calculation.
-        for trade in filter(lambda trade: (datetime.datetime.now() -
+        trade_value = 0
+        trade_quantity = 0
+        for trade in filter(lambda trade: (search_start -
                                            time_window <=
                                            trade.trade_time <=
-                                           datetime.datetime.now()),
+                                           search_start),
                             self._trades):
             trade_value += trade.trade_price * trade.quantity
             trade_quantity += trade.quantity
 
-        if trade_quantity > 0:
-            return float(trade_value) / trade_quantity  # force float division
+        return float(trade_value) / trade_quantity  # force float division
 
-        # If all trades happened before the specified time window, return
-        # the par value.
-        # NOTE This is not ideal. Perhaps a better implementation
-        # would be to raise an exception and request a longer time window.
-        return self.par_value
+    def dividend_yield(self):
+        """
+        Return the stock's dividend yield.
+
+        The calculation depends on the type of the stock.
+        The ticker price is calculated from the stock's trading in the past 15
+        minutes; if there have been no trades use the par value of the stock.
+        """
+
+        ticker_price = self.stock_price()
+
+        # Force float division (standard in Python 3.x)
+        if self.stype == 'common':
+            return float(self.last_dividend) / ticker_price
+
+        return float(self.fixed_dividend) * self.par_value / ticker_price
+
+    def price_earnings_ratio(self):
+        """
+        Returns the stock's price-earnings ratio.
+
+        The ticker price is calculated from the stock's trading in the past 15
+        minutes. See Stock.stock_price() for details on how different cases (no
+        trades, no recent trades, some recent trades) are handled.
+        """
+
+        ticker_price = self.stock_price()
+
+        # We use the correct dividend calculation for each type of stock.
+        if self.stype == 'common':
+            # Common stocks use their last dividend.
+            dividend = self.last_dividend
+        else:
+            # Preferred stocks use the product of fixed dividend and par value.
+            dividend = self.fixed_dividend * self.par_value
+
+        return ticker_price / dividend  # force float division
 
     @staticmethod
     def gbce_all_share_index():
