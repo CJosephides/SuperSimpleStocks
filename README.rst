@@ -19,6 +19,8 @@ Some implementation remarks
 
 3. I used the standard datetime module for time stamps. It may not be the prettiest, particularly from an end-user perspective; however, it's part of the standard library and works very well for our purposes here. If I were implementing this more generally, I would probably write a friendlier user interface for datetime objects.
 
-4. I implemented stock trades as a namedtuples, which I find are capable light-weight alternatives to classes that are just records. Not everybody is familiar with namedtuples, however, so these could easily be changed to  regular tuples (even dictionaries or classes) without much loss of generality.
+4. I implemented stock trades as a namedtuples, which I find are capable light-weight alternatives to classes that are just records. Not everybody is familiar with namedtuples, however, so these could easily be changed to  regular tuples (even dictionaries or classes) without loss of generality.
 
-5. I wrote some very rudimentary tests (some unit, some not-so-unit) in test_stock.py to check if things work reasonably well. Again, I didn't go overboard with these, and I even grouped many conceptually-similar assertions into single tests.
+5. It may have been more elegant, from an object-oriented design perspective, to create an base Stock class that CommonStock and PreferredStock extend. Since the difference between the two stock types is only in the dividend calculation, I thought this might be excessive abstraction and instead used a single base class.
+
+6. I wrote some very rudimentary tests (some unit, some not-so-unit) in test_stock.py to check if things work reasonably well. Again, I didn't go overboard with these, and I even grouped many conceptually-similar assertions into single tests.
