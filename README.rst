@@ -8,8 +8,6 @@ I wrote code for Python 3.x, which runs without errors on a clean virtual enviro
 
 I designed and implemented code to fulfil the stated requirements to my best understanding and interpretation of the problem. I may have made some unwarranted assumptions, since I am not very familiar with terms from finance; these are clearly marked in the code.
 
-Let me know if there are any questions: ``cjosephides@gmail.com``.
-
 Some implementation remarks
 ===========================
 
@@ -21,6 +19,6 @@ Some implementation remarks
 
 4. I implemented stock trades as a namedtuples, which I find are capable light-weight alternatives to classes that are just records. Not everybody is familiar with namedtuples, however, so these could easily be changed to  regular tuples (even dictionaries or classes) without loss of generality.
 
-5. It may have been more elegant, from an object-oriented design perspective, to create an base Stock class that CommonStock and PreferredStock extend. Since the difference between the two stock types is only in the dividend calculation, I thought this might be excessive abstraction and instead used a single base class.
+5. It may have been more elegant, from an object-oriented design perspective, to create a base Stock class that CommonStock and PreferredStock extend. Since the difference between the two stock types is only in the dividend calculation, I thought this might be excessive abstraction and instead used a single base class.
 
 6. I wrote some very rudimentary tests (some unit, some not-so-unit) in test_stock.py to check if things work reasonably well. Again, I didn't go overboard with these, and I even grouped many conceptually-similar assertions into single tests.
