@@ -14,7 +14,7 @@ import datetime
 Trade = namedtuple('Trade', ['buy_sell', 'quantity', 'trade_price',
                              'trade_time'])
 """
-buy_sell: +1 for buying; -1 for selling.
+buy_sell: +1 for buying; -1 for selling (enum-like)
 quantity: non-negative integer of shares traded.
 trade_price: non-negative integer for stock's trade price.
 trade_time: a datetime time stamp for the trade record.
@@ -22,10 +22,8 @@ trade_time: a datetime time stamp for the trade record.
 
 
 class Stock:
-    """Super simple stock.
-
-    Trades relevant to this stock are stored in a `semi-private' list
-    attribute, _trades, each as namedtuple object.
+    """
+    Super simple stock.
 
     Attributes
     ----------
@@ -37,20 +35,14 @@ class Stock:
     fixed_dividend: a percentile in [0., 1.], or nan, of the stock's fixed
                     dividend.
     par_value: a non-negative integer (in pennies) of the stock's par value.
+    _trades: trades relevant to this stock are stored in a `semi-private' list,
+             each as namedtuple object.
     """
-
-    # Static variables for the Stock class
-    stocks = {}  # a dict to help with stock-wide calculations
 
     def __init__(self, symbol, stype, last_dividend, fixed_dividend,
                  par_value):
         """
-        Initializes a stock.
-
-        The (static) Stock.stocks dictionary is automatically updated with the
-        new entry. The stock's symbol must be unique; if the symbol already
-        exists, then the previous class instance with this symbol will be
-        overwritten.
+        Initializes a stock from input arguments, which must all be provided.
         """
 
         # Do a minimum amount of validation.
@@ -80,10 +72,6 @@ class Stock:
         # underscore it.
         self._trades = []
 
-        # Add to the class dictionary. The stocks are uniquely identified by
-        # their symbol.
-        Stock.stocks[symbol] = self  # a reference to the stock instance
-
     def __repr__(self):
         """
         This could be something more useful!
@@ -103,8 +91,7 @@ class Stock:
         """
         Records a 'buy' trade.
 
-        We explicitly forbid trades with a timestamp (trade_time) set in the
-        future.
+        We explicitly forbid trades in the future (i.e. trade_time > now).
 
         This is a convenience function, to present a slightly nicer interface.
         The work is done by invoking the record_trade method.
@@ -124,8 +111,7 @@ class Stock:
         """
         Records a 'sell' trade.
 
-        We explicitly forbid trades with a timestamp (trade_time) set in the
-        future.
+        We explicitly forbid trades in the future (i.e. trade_time > now).
 
         This is a convenience function, to present a nicer interface. The work
         is done by invoking the record_trade method.
@@ -166,6 +152,8 @@ class Stock:
         Calculate the (weighted) mean stock price in some time window relative
         to the current time.
 
+        Args:
+        -----
         time_window : the length of the window in which to take the mean;
                       defaults to 15 minutes (before now).
         """
@@ -176,9 +164,9 @@ class Stock:
             return self.par_value
 
         # NOTE It is not clear how we should handle the case with no *recent*
-        # trades. To handle this, I assumed that we can calculate an average
+        # trades. To handle this, I assumed that we should calculate an average
         # (over the specified time window length) starting from the time of the
-        # *latest* trade. This is implemented below.
+        # *latest* trade and extending back. This is implemented below.
 
         latest_trade = max([trade.trade_time for trade in self._trades])
 
@@ -212,15 +200,18 @@ class Stock:
 
         The calculation depends on the type of the stock.
         The ticker price is calculated from the stock's trading in the past 15
-        minutes; if there have been no trades use the par value of the stock.
+        minutes (by default). See Stock.stock_price() for details on how
+        different cases (no trades, no recent trades, some recent trades) are
+        handled.
         """
 
         ticker_price = self.stock_price()
 
         # Force float division (standard in Python 3.x)
         if self.stype == 'common':
+            # Common stocks
             return float(self.last_dividend) / ticker_price
-
+        # Preferred stocks
         return float(self.fixed_dividend) * self.par_value / ticker_price
 
     def price_earnings_ratio(self):
@@ -228,8 +219,9 @@ class Stock:
         Returns the stock's price-earnings ratio.
 
         The ticker price is calculated from the stock's trading in the past 15
-        minutes. See Stock.stock_price() for details on how different cases (no
-        trades, no recent trades, some recent trades) are handled.
+        minutes (by default). See Stock.stock_price() for details on how
+        different cases (no trades, no recent trades, some recent trades) are
+        handled.
         """
 
         ticker_price = self.stock_price()
@@ -244,29 +236,37 @@ class Stock:
 
         return ticker_price / dividend  # force float division
 
-    @staticmethod
-    def gbce_all_share_index():
-        """
-        Calculate a global index from the geometric mean of all stock prices.
 
-        The stock prices used for this calculation are the ticker prices.
-        """
+def gbce_all_share_index(stocks):
+    """
+    Calculate a global index from the geometric mean of all stock prices.
 
-        # Do the calculation in log space to avoid working with scary
-        # exponents. If the ticker price is 0, we'll exclude that stock from
-        # the geometric mean.
-        log_sum = 0
-        n_zeros = 0
-        for _, stock in Stock.stocks.items():
-            ticker_price = stock.stock_price()
-            if ticker_price == 0:
-                n_zeros += 1
-                continue
-            log_sum += log(ticker_price)
+    The stock prices used for this calculation are the ticker prices.
 
-        # Cover the edge case of all zeros.
-        if n_zeros == len(Stock.stocks):
-            return 0.
+    Args
+    ----
+    stocks: an array of Stock objects.
 
-        # Exponentiate the answer before returning.
-        return exp((1. / (len(Stock.stocks)  - n_zeros)) * log_sum)
+    Returns
+    -------
+    Geometric mean of all stocks.
+    """
+
+    # Do the calculation in log space to avoid working with scary
+    # exponents. If the ticker price is 0, we'll exclude that stock from
+    # the geometric mean.
+    log_sum = 0
+    n_zeros = 0
+    for stock in stocks:
+        ticker_price = stock.stock_price()
+        if ticker_price == 0:
+            n_zeros += 1
+            continue
+        log_sum += log(ticker_price)
+
+    # Cover the edge case of all zeros.
+    if n_zeros == len(stocks):
+        return 0.
+
+    # Exponentiate the answer before returning.
+    return exp((1. / (len(stocks)  - n_zeros)) * log_sum)

@@ -7,7 +7,7 @@ Unit (and some not-so-unit) tests for stock.py.
 import datetime
 from math import nan
 import unittest
-from stock import Stock
+from stock import Stock, gbce_all_share_index
 
 class StockTestCase(unittest.TestCase):
     """
@@ -118,6 +118,37 @@ class StockTestCase(unittest.TestCase):
         # Stock price should be unchanged.
         self.assertEqual(sALE.stock_price(), ((500*25)+(300*15))/(500+300))
 
+    def test_stock_price_no_recent(self):
+        """
+        Tests stock (ticker) price calculation for the case with no recent
+        trades.
+        """
+
+        # Make a mock object for testing.
+        sALE = Stock('ALE', 'common', 23, nan, 60)
+
+        # A stock without trades has a ticker price equal to its par value.
+        self.assertEqual(sALE.stock_price(), 60)
+
+        # Add some mock Trades between -30 and -15 minutes relative to now.
+        sALE.buy(500, 25,
+                 datetime.datetime.now() - datetime.timedelta(minutes=16))
+        sALE.sell(300, 15,
+                  datetime.datetime.now() - datetime.timedelta(minutes=22))
+        self.assertEqual(len(sALE._trades), 2)
+
+        # Now add some mock Trades prior to 30 minutes in the past.
+        sALE.buy(250, 33,
+                 datetime.datetime.now() - datetime.timedelta(minutes=35))
+        sALE.sell(125, 55,
+                  datetime.datetime.now() - datetime.timedelta(minutes=39))
+        self.assertEqual(len(sALE._trades), 4)
+
+        # Since the latest trade happened at -16 minutes relative to now, the
+        # time window in which to calculate the stock price is [-29, -14].
+        self.assertEqual(sALE.stock_price(),
+                         ((500*25 + 300*15) / (500+300)))
+
     def test_stock_dividend_yield_common(self):
         """
         Tests correct dividend yield calculation for `common` stock types.
@@ -201,41 +232,41 @@ class StockTestCase(unittest.TestCase):
         """
 
         # Create some mock Stocks and Trades for each.
-        Stock('TEA', 'common', 0, nan, 100)
-        Stock('POP', 'common', 8, nan, 100)
-        Stock('ALE', 'common', 23, nan, 60)
-        Stock('GIN', 'preferred', 8, 0.02, 100)
-        Stock('JOE', 'common', 13, nan, 250)
-        self.assertEqual(len(Stock.stocks), 5)
+        stocks = []
+        stocks.append(Stock('TEA', 'common', 0, nan, 100))
+        stocks.append(Stock('POP', 'common', 8, nan, 100))
+        stocks.append(Stock('ALE', 'common', 23, nan, 60))
+        stocks.append(Stock('GIN', 'preferred', 8, 0.02, 100))
+        stocks.append(Stock('JOE', 'common', 13, nan, 250))
+        self.assertEqual(len(stocks), 5)
 
         # Add some Trades.
-        trades = {
-            'TEA': [(1, 10, 95, datetime.datetime.now()),
-                    (-1, 20, 90, datetime.datetime.now()),
-                    (1, 45, 120, datetime.datetime.now())],
-            'POP': [(1, 90, 95, datetime.datetime.now()),
-                    (1, 65, 90, datetime.datetime.now()),
-                    (-1, 200, 100, datetime.datetime.now())],
-            'ALE': [(1, 35, 50, datetime.datetime.now()),
-                    (-1, 50, 10, datetime.datetime.now())],
-            'GIN': [(1, 100, 1000, datetime.datetime.now() -
-                     datetime.timedelta(minutes=14))]
-        }
+        trades = [
+            [(1, 10, 95, datetime.datetime.now()),  # TEA
+             (-1, 20, 90, datetime.datetime.now()),
+             (1, 45, 120, datetime.datetime.now())],
+            [(1, 90, 95, datetime.datetime.now()),  # POP
+             (1, 65, 90, datetime.datetime.now()),
+             (-1, 200, 100, datetime.datetime.now())],
+            [(1, 35, 50, datetime.datetime.now()),  # ALE
+             (-1, 50, 10, datetime.datetime.now())],
+            [(1, 100, 1000, datetime.datetime.now() -  # GIN
+              datetime.timedelta(minutes=14))]]
 
-        for stock, trade_list in trades.items():
+        for stock_index, trade_list in enumerate(trades):
             for trade in trade_list:
-                Stock.stocks[stock]._record_trade(*trade)
+                stocks[stock_index]._record_trade(*trade)
 
         # Check that the stock (ticker) price for each stock is correct.
-        self.assertEqual(Stock.stocks['TEA'].stock_price(),
+        self.assertEqual(stocks[0].stock_price(),
                          (10*95 + 20*90 + 45*120)/(10+20+45))
-        self.assertEqual(Stock.stocks['POP'].stock_price(),
+        self.assertEqual(stocks[1].stock_price(),
                          (90*95 + 65*90 + 200*100)/(90+65+200))
-        self.assertEqual(Stock.stocks['ALE'].stock_price(),
+        self.assertEqual(stocks[2].stock_price(),
                          (35*50 + 50*10)/(35+50))
-        self.assertEqual(Stock.stocks['GIN'].stock_price(), 1000)
-        self.assertEqual(Stock.stocks['JOE'].stock_price(),
-                         Stock.stocks['JOE'].par_value)  # zero recorded trades
+        self.assertEqual(stocks[3].stock_price(), 1000)
+        self.assertEqual(stocks[4].stock_price(),
+                         stocks[4].par_value)  # zero recorded trades
 
         # The geometric mean calculation should be correct.
         # We do this calculation in log space in Stock.gbce_all_share_index(),
@@ -243,10 +274,9 @@ class StockTestCase(unittest.TestCase):
         stock_price = [(10*95 + 20*90 + 45*120)/(10+20+45),
                        (90*95 + 65*90 + 200*100)/(90+65+200),
                        (35*50 + 50 * 10)/(35+50),
-                       1000,
-                       Stock.stocks['JOE'].par_value]
+                       1000, stocks[4].par_value]
 
-        self.assertAlmostEqual(Stock.gbce_all_share_index(),
+        self.assertAlmostEqual(gbce_all_share_index(stocks),
                                (stock_price[0] * stock_price[1] *
                                 stock_price[2] * stock_price[3] *
                                 stock_price[4]) ** (1./5))
